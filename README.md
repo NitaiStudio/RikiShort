@@ -9,7 +9,7 @@
   </p>
 
   <!-- BUTTONS SECTION -->
-  <a href="YOUR_APK_DOWNLOAD_LINK_HERE">
+  <a href="https://drive.usercontent.google.com/download?id=1v198vE9tjfyZbw915haWfK93NSAv6_Qq&export=download">
     <img src="https://img.shields.io/badge/Download-Android%20APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" height="45" />
   </a>
   &nbsp;&nbsp;
@@ -80,7 +80,7 @@ Here is a glimpse of the **RikiShort** user interface:
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/YOUR_USERNAME/RikiShort.git
+    git clone https://github.com/YO/RikiShort.git
     ```
 2.  Open `index.html` in your browser.
 3.  Enjoy the app!
