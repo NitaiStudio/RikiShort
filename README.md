@@ -13,7 +13,7 @@
     <img src="https://img.shields.io/badge/Download-Android%20APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" height="45" />
   </a>
   &nbsp;&nbsp;
-  <a href="YOUR_WEBSITE_LINK_HERE">
+  <a href="https://nitaistudio.github.io/RikiShort/">
     <img src="https://img.shields.io/badge/Visit-Live%20Website-FE2C55?style=for-the-badge&logo=google-chrome&logoColor=white" height="45" />
   </a>
 
