@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <title>RikiShort Pro Max</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <style>
+        :root { --primary: #FE2C55; --sec: #25F4EE; --bg: #000; --text: #fff; --panel: #121212; --border: #2f2f2f; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; user-select: none; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Roboto', sans-serif; height: 100vh; width: 100vw; overflow: hidden; }
+        
+        .hidden { display: none !important; }
+        .flex-center { display: flex; align-items: center; justify-content: center; }
+        .blue-tick { color: #20D5EC; font-size: 14px; margin-left: 4px; vertical-align: middle; }
+
+        /* --- SPLASH SCREEN --- */
+        #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
+        .splash-logo { font-size: 3rem; font-weight: 900; background: linear-gradient(45deg, var(--primary), var(--sec)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; font-family: 'Montserrat', sans-serif; }
+        .loader { width: 30px; height: 30px; border: 3px solid #333; border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- APP CONTAINER --- */
+        #app { display: flex; flex-direction: column; height: 100%; width: 100%; position: relative; opacity: 0; transition: opacity 0.5s; }
+        #app.visible { opacity: 1; }
+        
+        /* --- FEED --- */
+        main { flex: 1; background: #000; position: relative; }
+        .feed-scroll { height: 100%; width: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+        .feed-scroll::-webkit-scrollbar { display: none; }
+        
+        .video-card { height: 100%; width: 100%; position: relative; scroll-snap-align: start; background: #000; overflow: hidden; }
+        video, iframe { width: 100%; height: 100%; object-fit: cover; border: none; display: block; }
+        
+        .click-layer { position: absolute; top: 0; left: 0; width: 100%; height: 80%; z-index: 5; }
+        .top-nav { position: absolute; top: 0; width: 100%; padding: 20px; z-index: 10; display: flex; justify-content: center; gap: 20px; background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); }
+        .tab-btn { color: #aaa; font-weight: bold; font-size: 16px; cursor: pointer; text-shadow: 1px 1px 2px #000; }
+        .tab-btn.active { color: #fff; border-bottom: 2px solid #fff; }
+        
+        .sound-toggle { position: absolute; top: 80px; right: 20px; z-index: 20; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 50%; color: white; cursor: pointer; }
+
+        .overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%); z-index: 6; padding-bottom: 60px; }
+        .side-bar { position: absolute; right: 10px; bottom: 80px; display: flex; flex-direction: column; gap: 20px; align-items: center; pointer-events: auto; }
+        .action-btn { display: flex; flex-direction: column; align-items: center; color: white; cursor: pointer; }
+        .action-icon { font-size: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); transition: transform 0.1s; }
+        .action-btn:active .action-icon { transform: scale(0.8); }
+        .action-text { font-size: 12px; font-weight: 500; margin-top: 5px; text-shadow: 1px 1px 2px #000; }
+        
+        .video-info { padding: 15px; max-width: 75%; pointer-events: auto; color: white; text-shadow: 1px 1px 2px #000; }
+        .user-row-feed { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+        .username { font-weight: 700; font-size: 17px; }
+        .follow-btn-small { border: 1px solid white; padding: 2px 8px; border-radius: 4px; font-size: 11px; background: rgba(255,255,255,0.2); cursor: pointer; }
+        .follow-btn-small.following { background: transparent; border: none; color: #ccc; }
+        
+        .caption { font-size: 14px; line-height: 1.4; }
+        .music-note { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 13px; }
+        .disc-anim { animation: spin 4s linear infinite; width: 20px; height: 20px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; }
+
+        /* --- BOTTOM NAV --- */
+        .nav-bar { height: 60px; background: #000; border-top: 1px solid #333; display: flex; justify-content: space-around; align-items: center; position: fixed; bottom: 0; width: 100%; z-index: 100; }
+        .nav-item { color: #888; font-size: 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer; width: 20%; }
+        .nav-item.active { color: white; }
+        .add-btn { width: 45px; height: 30px; background: linear-gradient(90deg, var(--sec), var(--primary)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: black; }
+
+        /* --- PAGES --- */
+        .full-page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #121212; z-index: 200; transform: translateX(100%); transition: transform 0.3s; overflow-y: auto; padding-bottom: 80px; }
+        .full-page.active { transform: translateX(0); }
+        .page-header { padding: 15px; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 15px; font-weight: bold; font-size: 18px; position: sticky; top: 0; background: #121212; z-index: 10; }
+
+        /* AUTH */
+        .auth-box { padding: 30px; text-align: center; margin-top: 50px; }
+        .input-field { width: 100%; background: #333; border: 1px solid #444; padding: 15px; margin: 10px 0; color: white; border-radius: 5px; }
+        .btn-primary { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 5px; font-weight: bold; font-size: 16px; margin-top: 20px; }
+        
+        /* WALLET */
+        .wallet-box { background: linear-gradient(135deg, #1a1a1a, #222); margin: 20px; padding: 30px; border-radius: 15px; text-align: center; border: 1px solid #444; }
+        .balance { font-size: 36px; font-weight: bold; color: var(--sec); margin: 10px 0; }
+        .history-list { margin: 20px; }
+        .history-item { background: #222; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
+        .status-badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; text-transform: uppercase; }
+        .status-pending { background: orange; color: black; }
+        .status-paid { background: green; color: white; }
+
+        /* PROFILE */
+        .profile-stats { display: flex; justify-content: space-around; margin: 20px 0; text-align: center; }
+        .stat-val { font-weight: bold; font-size: 18px; }
+        .stat-label { color: #888; font-size: 12px; }
+        .video-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; }
+        .grid-thumb { aspect-ratio: 2/3; background: #222; position: relative; }
+        .grid-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* MODALS */
+        .modal-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 500; display: none; }
+        .modal-bg.open { display: block; }
+        .bottom-sheet { position: absolute; bottom: 0; width: 100%; height: 60%; background: #1a1a1a; border-radius: 20px 20px 0 0; display: flex; flex-direction: column; animation: slideUp 0.3s; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .sheet-head { padding: 15px; text-align: center; border-bottom: 1px solid #333; font-weight: bold; }
+        .sheet-body { flex: 1; overflow-y: auto; padding: 15px; }
+        .comment-inp-box { padding: 10px; border-top: 1px solid #333; display: flex; gap: 10px; background: #1a1a1a; }
+        .user-list-item { display: flex; align-items: center; gap: 10px; padding: 15px; border-bottom: 1px solid #333; }
+
+        /* Heart Animation */
+        .heart-pop { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); font-size: 100px; color: var(--primary); pointer-events: none; z-index: 50; }
+        .heart-pop.anim { animation: heartPop 0.8s; }
+        @keyframes heartPop { 0% { transform: translate(-50%,-50%) scale(0); opacity: 0; } 30% { transform: translate(-50%,-50%) scale(1.2); opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1.5); opacity: 0; } }
+        
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 1000; }
+        .toast.show { opacity: 1; }
+        
+        /* Notifications */
+        .notif-item { padding: 15px; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; }
+        .notif-img { width: 40px; height: 40px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash-screen">
+    <div class="splash-logo">RikiShort</div>
+    <div style="color: #888; font-size: 12px; margin-bottom: 20px;">Make in India</div>
+    <div class="loader"></div>
+</div>
+
+<!-- AUTH VIEW -->
+<div id="auth-view" class="full-page" style="z-index: 900; background: black; display: flex; flex-direction: column; justify-content: center;">
+    <div class="auth-box">
+        <h1 style="color: var(--primary);">RikiShort</h1>
+        <div style="display:flex; margin-bottom:20px; border-bottom:1px solid #333;">
+            <div id="tab-login" style="flex:1; padding:10px; border-bottom:2px solid var(--primary); color: white; cursor:pointer;" onclick="app.toggleAuth('login')">Login</div>
+            <div id="tab-signup" style="flex:1; padding:10px; color:#888; cursor:pointer;" onclick="app.toggleAuth('signup')">Sign Up</div>
+        </div>
+        
+        <div id="login-form">
+            <input type="email" id="l-email" class="input-field" placeholder="Email">
+            <input type="password" id="l-pass" class="input-field" placeholder="Password">
+            <button class="btn-primary" onclick="app.login()">Log In</button>
+        </div>
+
+        <div id="signup-form" class="hidden">
+            <div onclick="document.getElementById('reg-file').click()" style="width:80px; height:80px; background:#222; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; border:2px dashed #444;">
+                <span class="material-icons-round">add_a_photo</span>
+                <img id="reg-prev" style="width:100%; height:100%; border-radius:50%; display:none; object-fit:cover;">
+            </div>
+            <input type="file" id="reg-file" hidden accept="image/*">
+            <input type="text" id="s-name" class="input-field" placeholder="Username">
+            <input type="email" id="s-email" class="input-field" placeholder="Email">
+            <input type="password" id="s-pass" class="input-field" placeholder="Password">
+            <button class="btn-primary" onclick="app.signup()">Create Account</button>
+        </div>
+    </div>
+</div>
+
+<!-- APP MAIN -->
+<div id="app">
+    <!-- FEED -->
+    <main>
+        <div class="top-nav">
+            <div class="tab-btn" onclick="app.loadFeed('following')">Following</div>
+            <div class="tab-btn active" onclick="app.loadFeed('foryou')">For You</div>
+            <span class="material-icons-round" style="position: absolute; right: 20px;" onclick="app.nav('search')">search</span>
+        </div>
+        <div class="feed-scroll" id="feed-container">
+            <!-- Videos load here -->
+        </div>
+    </main>
+
+    <!-- BOTTOM NAV -->
+    <nav class="nav-bar">
+        <div class="nav-item active" onclick="app.nav('home')"><span class="material-icons-round">home</span>Home</div>
+        <div class="nav-item" onclick="app.nav('search')"><span class="material-icons-round">search</span>Discover</div>
+        <div class="nav-item" onclick="app.nav('upload')"><div class="add-btn"><span class="material-icons-round">add</span></div></div>
+        <div class="nav-item" onclick="app.nav('inbox')"><span class="material-icons-round">inbox</span>Inbox</div>
+        <div class="nav-item" onclick="app.nav('profile')"><span class="material-icons-round">person</span>Me</div>
+    </nav>
+</div>
+
+<!-- UPLOAD PAGE -->
+<div id="upload-view" class="full-page">
+    <div class="page-header"><span class="material-icons-round" onclick="app.nav('home')">close</span> Upload</div>
+    <div style="padding: 20px;">
+        <div style="display:flex; background:#222; border-radius:8px; margin-bottom:20px;">
+            <div style="flex:1; padding:10px; text-align:center; background:#444; border-radius:8px;" onclick="app.setUploadType('file')">File</div>
+            <div style="flex:1; padding:10px; text-align:center;" onclick="app.setUploadType('link')">YouTube Link</div>
+        </div>
+        
+        <div id="up-file-area" style="border:2px dashed #444; padding:40px; text-align:center; background:#222; border-radius:10px;" onclick="document.getElementById('vid-file').click()">
+            <span class="material-icons-round" style="font-size:40px; color:#888;">cloud_upload</span>
+            <p id="file-lbl" style="color:#888; font-size:12px;">Tap to select video</p>
+            <input type="file" id="vid-file" hidden accept="video/*">
+        </div>
+        
+        <div id="up-link-area" class="hidden">
+            <input type="text" id="vid-link" class="input-field" placeholder="Paste YouTube/Shorts Link">
+        </div>
+
+        <input type="text" id="vid-caption" class="input-field" placeholder="Caption & Hashtags">
+        <button class="btn-primary" onclick="app.upload()">Post Video</button>
+        <div id="progress" style="height:4px; background:#333; margin-top:10px; width:0%; transition:0.3s; background:var(--sec);"></div>
+    </div>
+</div>
+
+<!-- PROFILE PAGE -->
+<div id="profile-view" class="full-page">
+    <div class="page-header">
+        <span class="material-icons-round" onclick="app.nav('home')">arrow_back</span> 
+        <span id="p-username">@user</span>
+        <span class="material-icons-round" style="margin-left:auto;" onclick="app.nav('settings')">menu</span>
+    </div>
+    <div style="text-align:center; padding:20px;">
+        <img id="p-img" src="" style="width:100px; height:100px; border-radius:50%; border:2px solid #333;">
+        <h2 id="p-name" style="margin:10px 0;">Name</h2>
+        <div class="profile-stats">
+            <div onclick="app.showList('following')"><div class="stat-val" id="s-following">0</div><div class="stat-label">Following</div></div>
+            <div onclick="app.showList('followers')"><div class="stat-val" id="s-followers">0</div><div class="stat-label">Followers</div></div>
+            <div><div class="stat-val" id="s-likes">0</div><div class="stat-label">Likes</div></div>
+        </div>
+        <button class="btn-primary" style="padding:10px; width:150px;" onclick="app.nav('wallet')">Wallet</button>
+    </div>
+    <div style="border-top:1px solid #333;"></div>
+    <div id="user-grid" class="video-grid"></div>
+</div>
+
+<!-- WALLET PAGE -->
+<div id="wallet-view" class="full-page">
+    <div class="page-header"><span class="material-icons-round" onclick="app.nav('profile')">arrow_back</span> Wallet</div>
+    <div class="wallet-box">
+        <div style="color:#aaa;">Total Earnings</div>
+        <div class="balance">₹<span id="w-balance">0.00</span></div>
+        <p style="color:#666; font-size:12px; margin-bottom:20px;">1 Lakh Views = ₹10.00</p>
+        
+        <div style="text-align:left; background:#222; padding:15px; border-radius:10px;">
+            <label style="font-size:12px; color:#aaa;">Withdraw Method</label>
+            <select id="w-method" class="input-field" style="margin-top:5px;"><option>UPI</option><option>USDT</option><option>Bank Transfer</option></select>
+            <input type="number" id="w-amount" class="input-field" placeholder="Amount (Min ₹100)">
+            <input type="text" id="w-addr" class="input-field" placeholder="UPI ID / Wallet Address">
+            <button class="btn-primary" onclick="app.requestWithdraw()">Submit Request</button>
+        </div>
+    </div>
+    <div style="padding:20px;">
+        <h3 style="margin-bottom:15px;">Transaction History</h3>
+        <div id="tx-history"></div>
+    </div>
+</div>
+
+<!-- SETTINGS PAGE (With Edit Profile) -->
+<div id="settings-view" class="full-page">
+    <div class="page-header"><span class="material-icons-round" onclick="app.nav('profile')">arrow_back</span> Settings</div>
+    <div style="padding:20px;">
+        <div onclick="app.openEditProfile()" style="padding:15px; border-bottom:1px solid #333; cursor:pointer; display:flex; align-items:center; gap:10px;">
+            <span class="material-icons-round">edit</span> Edit Profile
+        </div>
+        <div onclick="app.requestVerification()" style="padding:15px; border-bottom:1px solid #333; cursor:pointer; display:flex; align-items:center; gap:10px;">
+            <span class="material-icons-round" style="color:var(--sec);">verified</span> Request Verification
+        </div>
+        <div onclick="app.logout()" style="padding:15px; border-bottom:1px solid #333; cursor:pointer; color:var(--primary); display:flex; align-items:center; gap:10px;">
+            <span class="material-icons-round">logout</span> Log Out
+        </div>
+        <div style="padding:15px; color:#666; font-size:12px; margin-top:20px;">
+            Support: nitai.grp00@gmail.com<br>Version 2.0.0
+        </div>
+    </div>
+</div>
+
+<!-- SEARCH & INBOX (Placeholders) -->
+<div id="search-view" class="full-page">
+    <div class="page-header"><span class="material-icons-round" onclick="app.nav('home')">arrow_back</span> Discover</div>
+    <div style="padding:15px;"><input type="text" class="input-field" placeholder="Search..." onkeyup="app.search(this.value)"></div>
+    <div id="search-results" style="padding:15px;"></div>
+</div>
+<div id="inbox-view" class="full-page">
+    <div class="page-header"><span class="material-icons-round" onclick="app.nav('home')">arrow_back</span> Notifications</div>
+    <div id="notif-list"></div>
+</div>
+
+<!-- MODALS -->
+<div id="comment-modal" class="modal-bg">
+    <div class="bottom-sheet">
+        <div class="sheet-head">Comments <span style="float:right; cursor:pointer;" onclick="document.getElementById('comment-modal').classList.remove('open')">x</span></div>
+        <div id="comment-list" class="sheet-body"></div>
+        <div class="comment-inp-box">
+            <input type="text" id="comment-text" class="input-field" style="margin:0;" placeholder="Add a comment...">
+            <span class="material-icons-round" style="color:var(--primary); padding:10px;" onclick="app.postComment()">send</span>
+        </div>
+    </div>
+</div>
+
+<div id="list-modal" class="modal-bg">
+    <div class="bottom-sheet" style="height: 70%;">
+        <div class="sheet-head"><span id="list-title">Users</span> <span style="float:right; cursor:pointer;" onclick="document.getElementById('list-modal').classList.remove('open')">x</span></div>
+        <div id="user-list-body" class="sheet-body"></div>
+    </div>
+</div>
+
+<div id="edit-profile-modal" class="modal-bg">
+    <div class="bottom-sheet" style="height: auto; padding-bottom: 20px;">
+        <div class="sheet-head">Edit Profile <span style="float:right; cursor:pointer;" onclick="document.getElementById('edit-profile-modal').classList.remove('open')">x</span></div>
+        <div style="padding: 20px;">
+            <div style="text-align: center; margin-bottom: 10px;">
+                <img id="edit-prev" src="" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+                <br>
+                <input type="file" id="edit-file" style="margin-top: 10px;">
+            </div>
+            <input type="text" id="edit-name" class="input-field" placeholder="Username">
+            <input type="email" id="edit-email" class="input-field" placeholder="Email (Requires Re-login)" disabled> 
+            <input type="password" id="edit-pass" class="input-field" placeholder="New Password">
+            <button class="btn-primary" onclick="app.saveProfile()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast">Message</div>
+
+<script>
+    // --- CONFIGURATION ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyB6LGsXVn_150quZzcgjH749uMOAX9i5Oc",
+        authDomain: "blinkurl-a380a.firebaseapp.com",
+        databaseURL: "https://blinkurl-a380a-default-rtdb.firebaseio.com",
+        projectId: "blinkurl-a380a",
+        storageBucket: "blinkurl-a380a.firebasestorage.app",
+        messagingSenderId: "1088411158150",
+        appId: "1:1088411158150:web:02f4b05f451c151a883307"
+    };
+    
+    const CLOUD_NAME = "dea0kpjcp";
+    const CLOUD_PRESET = "Myserver";
+    const IMGBB_KEY = "07806a9e0f6db8a56403fcc0c909b163";
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    const app = {
+        user: null,
+        uploadType: 'file',
+        currentVid: null,
+
+        init: function() {
+            auth.onAuthStateChanged(u => {
+                if (u) {
+                    this.loadUser(u.uid);
+                } else {
+                    document.getElementById('splash-screen').style.display = 'none';
+                    document.getElementById('auth-view').classList.add('active');
+                }
+            });
+
+            document.getElementById('reg-file').addEventListener('change', e => {
+                const f = e.target.files[0];
+                if(f) {
+                    const r = new FileReader();
+                    r.onload = ev => { 
+                        document.getElementById('reg-prev').src = ev.target.result; 
+                        document.getElementById('reg-prev').style.display = 'block'; 
+                    };
+                    r.readAsDataURL(f);
+                }
+            });
+        },
+
+        loadUser: function(uid) {
+            db.ref('users/' + uid).on('value', s => {
+                if(s.exists()) {
+                    this.user = s.val();
+                    document.getElementById('splash-screen').style.display = 'none';
+                    document.getElementById('auth-view').classList.remove('active');
+                    document.getElementById('app').classList.add('visible');
+                    this.loadFeed();
+                    this.updateProfileUI();
+                    this.loadHistory();
+                    this.loadNotifications();
+                } else {
+                    auth.signOut();
+                }
+            });
+        },
+
+        // --- NAVIGATION ---
+        nav: function(page) {
+            document.querySelectorAll('.full-page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            if(page !== 'home') document.getElementById(page + '-view').classList.add('active');
+            
+            const navs = ['home','search','upload','inbox','profile'];
+            if(navs.includes(page)) {
+                document.querySelectorAll('.nav-item')[navs.indexOf(page)].classList.add('active');
+            }
+        },
+
+        // --- AUTH ---
+        toggleAuth: function(type) {
+            document.getElementById('login-form').classList.toggle('hidden', type !== 'login');
+            document.getElementById('signup-form').classList.toggle('hidden', type !== 'signup');
+            document.getElementById('tab-login').style.borderBottom = type === 'login' ? '2px solid var(--primary)' : 'none';
+            document.getElementById('tab-signup').style.borderBottom = type === 'signup' ? '2px solid var(--primary)' : 'none';
+            document.getElementById('tab-login').style.color = type === 'login' ? 'white' : '#888';
+            document.getElementById('tab-signup').style.color = type === 'signup' ? 'white' : '#888';
+        },
+
+        signup: async function() {
+            const email = document.getElementById('s-email').value;
+            const pass = document.getElementById('s-pass').value;
+            const name = document.getElementById('s-name').value;
+            const file = document.getElementById('reg-file').files[0];
+
+            if(!email || !pass || !name) return this.toast("Fill all fields");
+
+            this.toast("Creating Account...");
+            try {
+                const cred = await auth.createUserWithEmailAndPassword(email, pass);
+                let avatar = "https://i.ibb.co/3sN4n83/default-avatar.png";
+                
+                if(file) {
+                    const fd = new FormData(); fd.append('image', file);
+                    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method:'POST', body:fd });
+                    const d = await res.json();
+                    if(d.data) avatar = d.data.url;
+                }
+
+                const u = { id: cred.user.uid, username: name, email, avatar, balance: 0, isVerified: false };
+                await db.ref('users/' + u.id).set(u);
+                this.toast("Welcome!");
+            } catch(e) { this.toast(e.message); }
+        },
+
+        login: function() {
+            const email = document.getElementById('l-email').value;
+            const pass = document.getElementById('l-pass').value;
+            this.toast("Logging In...");
+            auth.signInWithEmailAndPassword(email, pass).catch(e => this.toast("Invalid Credentials"));
+        },
+
+        logout: function() { auth.signOut(); location.reload(); },
+
+        // --- UPLOAD ---
+        setUploadType: function(t) {
+            this.uploadType = t;
+            document.getElementById('up-file-area').classList.toggle('hidden', t !== 'file');
+            document.getElementById('up-link-area').classList.toggle('hidden', t !== 'link');
+        },
+
+        upload: async function() {
+            const cap = document.getElementById('vid-caption').value;
+            let url = '', type = 'file';
+
+            if(this.uploadType === 'file') {
+                const file = document.getElementById('vid-file').files[0];
+                if(!file) return this.toast("Select File");
+                this.toast("Uploading...");
+                document.getElementById('progress').style.width = "50%";
+                
+                const fd = new FormData(); fd.append('file', file); fd.append('upload_preset', CLOUD_PRESET); fd.append('cloud_name', CLOUD_NAME);
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, { method:'POST', body:fd });
+                const d = await res.json();
+                url = d.secure_url;
+            } else {
+                const link = document.getElementById('vid-link').value;
+                if(!link) return this.toast("Enter Link");
+                if(link.includes('youtu')) {
+                    const match = link.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/))([^"&?\/\s]{11})/);
+                    if(match) { url = match[1]; type = 'youtube'; }
+                    else return this.toast("Invalid YouTube Link");
+                }
+            }
+
+            const vidId = db.ref('videos').push().key;
+            await db.ref('videos/' + vidId).set({
+                id: vidId, uid: this.user.id, url, type, desc: cap, likes: 0, views: 0, createdAt: firebase.database.ServerValue.TIMESTAMP
+            });
+            
+            // Notify Followers
+            this.notifyFollowers(vidId);
+            
+            this.toast("Posted!");
+            this.nav('home');
+            document.getElementById('progress').style.width = "0%";
+        },
+
+        notifyFollowers: function(vidId) {
+            db.ref('followers/' + this.user.id).once('value', s => {
+                if(s.exists()) {
+                    s.forEach(f => {
+                        db.ref('notifications/' + f.key).push({
+                            type: 'video',
+                            from: this.user.username,
+                            avatar: this.user.avatar,
+                            msg: 'uploaded a new video',
+                            time: Date.now()
+                        });
+                    });
+                }
+            });
+        },
+
+        // --- FEED ---
+        loadFeed: function() {
+            const cont = document.getElementById('feed-container');
+            cont.innerHTML = '';
+            
+            db.ref('videos').limitToLast(20).once('value', s => {
+                const d = s.val();
+                if(d) {
+                    const list = Object.values(d).reverse();
+                    list.forEach(v => cont.appendChild(this.createCard(v)));
+                    this.initObserver();
+                }
+            });
+        },
+
+        createCard: function(v) {
+            const el = document.createElement('div');
+            el.className = 'video-card';
+            
+            let media = v.type === 'youtube' 
+                ? `<iframe src="https://www.youtube.com/embed/${v.url}?autoplay=1&mute=1&controls=0&loop=1&playlist=${v.url}&playsinline=1&enablejsapi=1" allow="autoplay"></iframe>`
+                : `<video src="${v.url}" loop playsinline muted></video>`;
+
+            el.innerHTML = `
+                ${media}
+                <div class="click-layer"></div>
+                <div class="sound-toggle" onclick="app.toggleMute(this)"><span class="material-icons-round">volume_off</span></div>
+                <div class="heart-pop" id="h-${v.id}">♥</div>
+                <div class="overlay">
+                    <div class="side-bar">
+                        <div class="action-btn"><img class="avatar-feed" id="av-${v.id}" src="" style="width:45px;height:45px;border-radius:50%;border:2px solid white;"></div>
+                        <div class="action-btn" onclick="app.like('${v.id}', '${v.uid}')">
+                            <span class="material-icons-round action-icon" id="l-icon-${v.id}">favorite_border</span>
+                            <span class="action-text" id="l-txt-${v.id}">${v.likes}</span>
+                        </div>
+                        <div class="action-btn" onclick="app.openComments('${v.id}')">
+                            <span class="material-icons-round action-icon">chat_bubble_outline</span>
+                            <span class="action-text" id="c-txt-${v.id}">0</span>
+                        </div>
+                        <div class="action-btn" onclick="app.share('${v.id}')">
+                            <span class="material-icons-round action-icon">share</span>
+                            <span class="action-text">Share</span>
+                        </div>
+                    </div>
+                    <div class="video-info">
+                        <div class="user-row-feed">
+                            <span class="username" id="u-${v.id}">@User</span>
+                            <span class="follow-btn-small" id="f-btn-${v.uid}" onclick="app.toggleFollow('${v.uid}')">Follow</span>
+                        </div>
+                        <div class="caption">${v.desc}</div>
+                        <div class="music-note"><span class="material-icons-round disc-anim">album</span> Original Sound</div>
+                    </div>
+                </div>
+            `;
+
+            // Load User Info
+            db.ref('users/' + v.uid).once('value', s => {
+                if(s.exists()) {
+                    const u = s.val();
+                    el.querySelector(`#u-${v.id}`).innerText = '@' + u.username;
+                    el.querySelector(`#av-${v.id}`).src = u.avatar;
+                    app.checkFollow(v.uid);
+                }
+            });
+
+            // Listeners
+            db.ref('likes/' + v.id).on('value', s => {
+                el.querySelector(`#l-txt-${v.id}`).innerText = s.numChildren();
+                const icon = el.querySelector(`#l-icon-${v.id}`);
+                if(s.hasChild(this.user.id)) { icon.innerText="favorite"; icon.style.color="var(--primary)"; }
+                else { icon.innerText="favorite_border"; icon.style.color="white"; }
+            });
+            db.ref('comments/' + v.id).on('value', s => el.querySelector(`#c-txt-${v.id}`).innerText = s.numChildren());
+
+            // Double Tap Logic
+            let lastTap = 0;
+            el.querySelector('.click-layer').addEventListener('click', () => {
+                const now = new Date().getTime();
+                if(now - lastTap < 300) {
+                    this.like(v.id, v.uid, true);
+                } else {
+                    this.togglePlay(el, v.type);
+                }
+                lastTap = now;
+            });
+
+            return el;
+        },
+
+        // --- INTERACTIONS ---
+        togglePlay: function(card, type) {
+            if(type === 'youtube') {
+                const iframe = card.querySelector('iframe');
+                // YT Iframe API interaction (simplified)
+            } else {
+                const vid = card.querySelector('video');
+                if(vid.paused) vid.play(); else vid.pause();
+            }
+        },
+
+        toggleMute: function(btn) {
+            const card = btn.closest('.video-card');
+            const vid = card.querySelector('video');
+            const iframe = card.querySelector('iframe');
+            
+            if(vid) {
+                vid.muted = !vid.muted;
+                btn.innerHTML = vid.muted ? '<span class="material-icons-round">volume_off</span>' : '<span class="material-icons-round">volume_up</span>';
+            }
+            if(iframe) {
+                const cmd = btn.innerHTML.includes('off') ? 'unMute' : 'mute';
+                iframe.contentWindow.postMessage(`{"event":"command","func":"${cmd}","args":""}`, '*');
+                btn.innerHTML = cmd === 'unMute' ? '<span class="material-icons-round">volume_up</span>' : '<span class="material-icons-round">volume_off</span>';
+            }
+        },
+
+        like: function(vidId, ownerId, anim) {
+            if(anim) {
+                const h = document.getElementById(`h-${vidId}`);
+                h.classList.add('anim');
+                setTimeout(()=> h.classList.remove('anim'), 800);
+            }
+            const ref = db.ref('likes/' + vidId + '/' + this.user.id);
+            ref.once('value', s => {
+                if(s.exists()) {
+                    if(!anim) { ref.remove(); db.ref('videos/'+vidId+'/likes').transaction(l => (l||1)-1); }
+                } else {
+                    ref.set(true);
+                    db.ref('videos/'+vidId+'/likes').transaction(l => (l||0)+1);
+                    // Notify Owner
+                    if(ownerId !== this.user.id) {
+                        db.ref('notifications/' + ownerId).push({
+                            type: 'like',
+                            from: this.user.username,
+                            avatar: this.user.avatar,
+                            msg: 'liked your video',
+                            time: Date.now()
+                        });
+                    }
+                }
+            });
+        },
+
+        // --- FOLLOW SYSTEM ---
+        checkFollow: function(uid) {
+            if(uid === this.user.id) {
+                document.querySelectorAll(`#f-btn-${uid}`).forEach(b => b.style.display = 'none');
+                return;
+            }
+            db.ref(`following/${this.user.id}/${uid}`).on('value', s => {
+                const text = s.exists() ? 'Following' : 'Follow';
+                document.querySelectorAll(`#f-btn-${uid}`).forEach(b => {
+                    b.innerText = text;
+                    if(s.exists()) b.classList.add('following');
+                    else b.classList.remove('following');
+                });
+            });
+        },
+
+        toggleFollow: function(uid) {
+            const ref = db.ref(`following/${this.user.id}/${uid}`);
+            ref.once('value', s => {
+                if(s.exists()) {
+                    ref.remove();
+                    db.ref(`followers/${uid}/${this.user.id}`).remove();
+                } else {
+                    ref.set(true);
+                    db.ref(`followers/${uid}/${this.user.id}`).set(true);
+                    // Notify
+                    db.ref('notifications/' + uid).push({
+                        type: 'follow',
+                        from: this.user.username,
+                        avatar: this.user.avatar,
+                        msg: 'started following you',
+                        time: Date.now()
+                    });
+                }
+            });
+        },
+
+        showList: function(type) {
+            document.getElementById('list-modal').classList.add('open');
+            document.getElementById('list-title').innerText = type === 'following' ? 'Following' : 'Followers';
+            const body = document.getElementById('user-list-body');
+            body.innerHTML = 'Loading...';
+            
+            const ref = type === 'following' ? `following/${this.user.id}` : `followers/${this.user.id}`;
+            db.ref(ref).once('value', s => {
+                body.innerHTML = '';
+                if(s.exists()) {
+                    s.forEach(k => {
+                        db.ref('users/' + k.key).once('value', u => {
+                            const val = u.val();
+                            body.innerHTML += `
+                                <div class="user-list-item">
+                                    <img src="${val.avatar}" style="width:40px;height:40px;border-radius:50%;">
+                                    <b>${val.username}</b>
+                                </div>
+                            `;
+                        });
+                    });
+                } else { body.innerHTML = 'List empty'; }
+            });
+        },
+
+        share: function(vidId) {
+            const url = window.location.href + "?v=" + vidId;
+            if(navigator.share) {
+                navigator.share({ title: 'RikiShort Video', text: 'Watch this!', url: url });
+            } else {
+                navigator.clipboard.writeText(url);
+                this.toast("Link Copied!");
+            }
+        },
+
+        openComments: function(vidId) {
+            this.currentVid = vidId;
+            document.getElementById('comment-modal').classList.add('open');
+            const list = document.getElementById('comment-list');
+            list.innerHTML = 'Loading...';
+            
+            db.ref('comments/' + vidId).on('value', s => {
+                list.innerHTML = '';
+                if(s.exists()) {
+                    s.forEach(c => {
+                        const val = c.val();
+                        list.innerHTML += `
+                            <div style="margin-bottom:15px; display:flex; gap:10px;">
+                                <img src="${val.avatar}" style="width:30px; height:30px; border-radius:50%;">
+                                <div>
+                                    <div style="font-weight:bold; font-size:13px; color:#ccc;">${val.username}</div>
+                                    <div style="font-size:14px;">${val.text}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else { list.innerHTML = '<div class="flex-center" style="height:100%; color:#666;">No comments yet</div>'; }
+            });
+        },
+
+        postComment: function() {
+            const txt = document.getElementById('comment-text').value;
+            if(!txt) return;
+            db.ref('comments/' + this.currentVid).push({
+                text: txt,
+                username: this.user.username,
+                avatar: this.user.avatar,
+                uid: this.user.id,
+                time: firebase.database.ServerValue.TIMESTAMP
+            });
+            document.getElementById('comment-text').value = '';
+        },
+
+        // --- EDIT PROFILE ---
+        openEditProfile: function() {
+            document.getElementById('edit-profile-modal').classList.add('open');
+            document.getElementById('edit-name').value = this.user.username;
+            document.getElementById('edit-email').value = this.user.email;
+            document.getElementById('edit-prev').src = this.user.avatar;
+        },
+
+        saveProfile: async function() {
+            const name = document.getElementById('edit-name').value;
+            const pass = document.getElementById('edit-pass').value;
+            const file = document.getElementById('edit-file').files[0];
+            let avatar = this.user.avatar;
+
+            this.toast("Saving...");
+
+            if(file) {
+                const fd = new FormData(); fd.append('image', file);
+                const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method:'POST', body:fd });
+                const d = await res.json();
+                if(d.data) avatar = d.data.url;
+            }
+
+            if(pass) {
+                try { await auth.currentUser.updatePassword(pass); }
+                catch(e) { return this.toast("Re-login to change password"); }
+            }
+
+            await db.ref('users/' + this.user.id).update({
+                username: name,
+                avatar: avatar
+            });
+
+            document.getElementById('edit-profile-modal').classList.remove('open');
+            this.toast("Profile Updated!");
+        },
+
+        // --- WALLET & VERIFY ---
+        requestWithdraw: function() {
+            const amt = document.getElementById('w-amount').value;
+            const addr = document.getElementById('w-addr').value;
+            const method = document.getElementById('w-method').value;
+            
+            if(amt < 100) return this.toast("Min amount ₹100");
+            if(amt > this.user.balance) return this.toast("Insufficient Balance");
+            if(!addr) return this.toast("Enter Address");
+
+            const req = {
+                uid: this.user.id,
+                amount: amt,
+                method: method,
+                address: addr,
+                status: 'pending',
+                date: new Date().toLocaleDateString()
+            };
+            
+            db.ref('withdrawals').push(req);
+            db.ref('users/' + this.user.id + '/balance').set(this.user.balance - amt);
+            this.toast("Request Sent!");
+            this.loadUser(this.user.id);
+        },
+
+        loadHistory: function() {
+            const list = document.getElementById('tx-history');
+            list.innerHTML = '';
+            db.ref('withdrawals').orderByChild('uid').equalTo(this.user.id).once('value', s => {
+                if(s.exists()) {
+                    s.forEach(w => {
+                        const v = w.val();
+                        list.innerHTML += `
+                            <div class="history-item">
+                                <div><b>₹${v.amount}</b> via ${v.method}<br><small>${v.date}</small></div>
+                                <span class="status-badge ${v.status === 'paid' ? 'status-paid' : 'status-pending'}">${v.status}</span>
+                            </div>
+                        `;
+                    });
+                } else { list.innerHTML = '<p style="text-align:center; color:#666;">No transactions yet</p>'; }
+            });
+        },
+
+        loadNotifications: function() {
+            const list = document.getElementById('notif-list');
+            list.innerHTML = '';
+            db.ref('notifications/' + this.user.id).limitToLast(10).on('value', s => {
+                if(s.exists()) {
+                    s.forEach(n => {
+                        const val = n.val();
+                        list.innerHTML += `
+                            <div class="notif-item">
+                                <img src="${val.avatar}" class="notif-img">
+                                <div>
+                                    <b>${val.from}</b> ${val.msg}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+        },
+
+        requestVerification: function() {
+            db.ref('verifications/' + this.user.id).set({
+                uid: this.user.id,
+                username: this.user.username,
+                status: 'pending'
+            });
+            this.toast("Verification Request Sent!");
+        },
+
+        // --- UTILS ---
+        updateProfileUI: function() {
+            document.getElementById('p-username').innerText = '@' + this.user.username;
+            document.getElementById('p-name').innerText = this.user.username;
+            document.getElementById('p-img').src = this.user.avatar;
+            document.getElementById('w-balance').innerText = (this.user.balance || 0).toFixed(2);
+            
+            // Followers/Following Count
+            db.ref('followers/' + this.user.id).on('value', s => document.getElementById('s-followers').innerText = s.numChildren());
+            db.ref('following/' + this.user.id).on('value', s => document.getElementById('s-following').innerText = s.numChildren());
+            
+            // Grid
+            const grid = document.getElementById('user-grid');
+            grid.innerHTML = '';
+            db.ref('videos').orderByChild('uid').equalTo(this.user.id).once('value', s => {
+                if(s.exists()) {
+                    Object.values(s.val()).forEach(v => {
+                        let thumb = v.type === 'youtube' ? `https://img.youtube.com/vi/${v.url}/hqdefault.jpg` : v.url;
+                        let tag = v.type === 'youtube' ? `<img src="${thumb}">` : `<video src="${v.url}"></video>`;
+                        grid.innerHTML += `<div class="grid-thumb">${tag}</div>`;
+                    });
+                }
+            });
+        },
+
+        initObserver: function() {
+            const obs = new IntersectionObserver(es => {
+                es.forEach(e => {
+                    const v = e.target.querySelector('video');
+                    const i = e.target.querySelector('iframe');
+                    
+                    if(e.isIntersecting) {
+                        if(v) { v.currentTime = 0; v.play(); }
+                        if(i) i.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                        
+                        // Monetization: 1 Lakh View = 10 Rs -> 1 View = 0.0001
+                        const vidId = e.target.querySelector('.big-heart').id.replace('h-','');
+                        const key = 'view-'+vidId;
+                        if(!sessionStorage.getItem(key)) {
+                            sessionStorage.setItem(key, true);
+                            db.ref('videos/'+vidId).once('value', s => {
+                                if(s.exists()) {
+                                    db.ref('users/'+s.val().uid+'/balance').transaction(b => (b||0) + 0.0001);
+                                }
+                            });
+                        }
+                    } else {
+                        if(v) v.pause();
+                        if(i) i.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+                    }
+                });
+            }, {threshold: 0.6});
+            document.querySelectorAll('.video-card').forEach(c => obs.observe(c));
+        },
+
+        toast: function(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+    };
+
+    window.onload = () => app.init();
+</script>
+</body>
+</html>
