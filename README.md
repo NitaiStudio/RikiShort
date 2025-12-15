@@ -33,9 +33,9 @@ Here is a glimpse of the **RikiShort** user interface:
       <td align="center"><b>Comments & Social</b></td>
     </tr>
     <tr>
-      <td><img src="screenshots/1.jpg" width="250" alt="Splash"/></td>
-      <td><img src="screenshots/2.jpg" width="250" alt="Feed"/></td>
-      <td><img src="screenshots/3.jpg" width="250" alt="Comments"/></td>
+      <td><img src="1.jpg" width="250" alt="Splash"/></td>
+      <td><img src="2.jpg" width="250" alt="Feed"/></td>
+      <td><img src="3.jpg" width="250" alt="Comments"/></td>
     </tr>
     <tr>
       <td align="center"><b>Discover & Search</b></td>
@@ -43,9 +43,9 @@ Here is a glimpse of the **RikiShort** user interface:
       <td align="center"><b>Easy Upload</b></td>
     </tr>
     <tr>
-      <td><img src="screenshots/4.jpg" width="250" alt="Search"/></td>
-      <td><img src="screenshots/5.jpg" width="250" alt="Wallet"/></td>
-      <td><img src="screenshots/6.jpg" width="250" alt="Upload"/></td>
+      <td><img src="4.jpg" width="250" alt="Search"/></td>
+      <td><img src="5.jpg" width="250" alt="Wallet"/></td>
+      <td><img src="6.jpg" width="250" alt="Upload"/></td>
     </tr>
   </table>
 </div>
