@@ -80,7 +80,7 @@ Here is a glimpse of the **RikiShort** user interface:
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/YO/RikiShort.git
+    git clone https://github.com/NitaiStudio/RikiShort.git
     ```
 2.  Open `index.html` in your browser.
 3.  Enjoy the app!
