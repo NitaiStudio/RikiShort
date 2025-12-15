@@ -1,3 +1,5 @@
+<!-- START OF FILE index.html -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -873,7 +875,10 @@
 
         // --- UTILS ---
         updateProfileUI: function() {
-            document.getElementById('p-username').innerText = '@' + this.user.username;
+            // FIX: Check verification and show blue tick
+            const verifyBadge = this.user.isVerified ? '<span class="material-icons-round blue-tick">verified</span>' : '';
+            document.getElementById('p-username').innerHTML = '@' + this.user.username + verifyBadge;
+            
             document.getElementById('p-name').innerText = this.user.username;
             document.getElementById('p-img').src = this.user.avatar;
             document.getElementById('w-balance').innerText = (this.user.balance || 0).toFixed(2);
